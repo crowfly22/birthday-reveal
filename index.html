@@ -1,0 +1,609 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>Birthday Reveal ✨</title>
+<meta name="description" content="Create magical birthday experiences. Generate a QR barcode, scan to reveal an interactive celebration.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&family=Playfair+Display:ital,wght@0,400;0,700;0,900;1,400;1,700&family=Dancing+Script:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+:root{
+--bg:#0a0a12;--bg2:#12121e;--bg3:#1a1a2e;
+--pink:#ff6b9d;--gold:#ffd700;--purple:#c084fc;
+--cyan:#67e8f9;--rose:#fb7185;--amber:#fbbf24;
+--text:#f0e6ff;--text2:#a090c0;--text3:#605080;
+--glass:rgba(255,255,255,0.06);--glass2:rgba(255,255,255,0.1);
+--border:rgba(255,255,255,0.1);
+--radius:16px;--radius2:10px;
+}
+html,body{height:100%;overflow:hidden}
+body{font-family:'Inter',sans-serif;background:var(--bg);color:var(--text)}
+.playfair{font-family:'Playfair Display',serif}
+.script{font-family:'Dancing Script',cursive}
+
+/* ─── SCREENS ─── */
+.screen{display:none;width:100%;height:100%;position:fixed;top:0;left:0}
+.screen.active{display:flex}
+
+/* ─── CREATOR SCREEN ─── */
+#creator{flex-direction:column;align-items:center;justify-content:center;background:linear-gradient(135deg,#0a0a12 0%,#1a0a2e 50%,#0a1a2e 100%);overflow-y:auto;padding:40px 20px}
+.creator-box{max-width:520px;width:100%;position:relative}
+.creator-box::before{content:'';position:absolute;top:-100px;left:50%;transform:translateX(-50%);width:400px;height:400px;background:radial-gradient(circle,rgba(192,132,252,0.12) 0%,transparent 70%);pointer-events:none}
+
+.logo{text-align:center;margin-bottom:36px}
+.logo h1{font-size:2.2rem;font-weight:900;background:linear-gradient(135deg,var(--pink),var(--gold),var(--purple));-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;letter-spacing:-0.02em}
+.logo .sub{color:var(--text2);font-size:0.9rem;margin-top:6px}
+
+.form-card{background:var(--glass);border:1px solid var(--border);border-radius:var(--radius);padding:28px;backdrop-filter:blur(20px)}
+.field{margin-bottom:18px}
+.field label{display:block;font-size:0.72rem;text-transform:uppercase;letter-spacing:0.12em;color:var(--text2);margin-bottom:8px;font-weight:600}
+.field input,.field textarea,.field select{width:100%;padding:12px 14px;background:var(--bg2);border:1px solid var(--border);border-radius:var(--radius2);color:var(--text);font-family:'Inter',sans-serif;font-size:0.9rem;outline:none;transition:border 0.3s}
+.field input:focus,.field textarea:focus,.field select:focus{border-color:var(--purple)}
+.field textarea{resize:vertical;min-height:80px}
+.field select{cursor:pointer;appearance:none;background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath fill='%23a090c0' d='M6 8L1 3h10z'/%3E%3C/svg%3E");background-repeat:no-repeat;background-position:right 12px center}
+
+.theme-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-top:8px}
+.theme-opt{padding:10px 6px;text-align:center;border-radius:var(--radius2);border:2px solid transparent;cursor:pointer;transition:all 0.2s;font-size:0.75rem;font-weight:500;background:var(--bg2)}
+.theme-opt:hover{border-color:var(--text3)}
+.theme-opt.active{border-color:var(--purple);background:rgba(192,132,252,0.1)}
+.theme-opt .t-emoji{font-size:1.4rem;display:block;margin-bottom:4px}
+
+.btn-generate{width:100%;padding:14px;background:linear-gradient(135deg,var(--pink),var(--purple));border:none;border-radius:var(--radius2);color:#fff;font-weight:700;font-size:1rem;cursor:pointer;transition:all 0.3s;margin-top:8px}
+.btn-generate:hover{transform:scale(1.02);box-shadow:0 8px 30px rgba(192,132,252,0.3)}
+
+/* ─── QR RESULT ─── */
+#qrResult{display:none;text-align:center;margin-top:24px;padding:24px;background:var(--glass);border:1px solid var(--border);border-radius:var(--radius);backdrop-filter:blur(20px)}
+#qrResult canvas{margin:12px auto;border-radius:12px}
+.qr-label{font-size:0.75rem;color:var(--text2);margin-top:8px}
+.btn-action{display:inline-block;padding:10px 20px;margin:6px;border-radius:var(--radius2);border:1px solid var(--border);background:var(--bg2);color:var(--text);font-size:0.8rem;font-weight:500;cursor:pointer;transition:all 0.2s}
+.btn-action:hover{border-color:var(--purple);color:var(--purple)}
+
+/* ─── BIRTHDAY REVEAL SCREEN ─── */
+#reveal{flex-direction:column;align-items:center;justify-content:center;background:#000;overflow:hidden;position:relative}
+#revealCanvas{position:absolute;top:0;left:0;width:100%;height:100%;z-index:1}
+.reveal-content{position:relative;z-index:10;text-align:center;padding:20px;max-width:500px;width:100%}
+
+/* Intro tap */
+.tap-overlay{position:fixed;top:0;left:0;width:100%;height:100%;z-index:100;display:flex;align-items:center;justify-content:center;flex-direction:column;cursor:pointer;background:rgba(0,0,0,0.85)}
+.tap-overlay .tap-emoji{font-size:4rem;animation:pulse 2s ease infinite}
+.tap-overlay .tap-text{font-size:1.1rem;color:var(--text2);margin-top:16px;animation:fadeInOut 2s ease infinite}
+@keyframes pulse{0%,100%{transform:scale(1)}50%{transform:scale(1.15)}}
+@keyframes fadeInOut{0%,100%{opacity:0.5}50%{opacity:1}}
+
+/* Animated elements */
+.birthday-name{font-size:clamp(2rem,8vw,3.5rem);font-weight:900;background:linear-gradient(135deg,var(--gold),var(--pink),var(--purple));-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;opacity:0;transform:scale(0.5);transition:all 1s cubic-bezier(0.34,1.56,0.64,1);margin-bottom:8px}
+.birthday-name.show{opacity:1;transform:scale(1)}
+.birthday-age{font-size:clamp(4rem,15vw,8rem);font-weight:900;color:var(--gold);opacity:0;transform:translateY(50px);transition:all 0.8s ease;font-family:'Playfair Display',serif}
+.birthday-age.show{opacity:1;transform:translateY(0)}
+.birthday-msg{font-size:1.1rem;line-height:1.7;color:var(--text);opacity:0;transform:translateY(30px);transition:all 0.8s ease 0.3s;margin:20px 0;font-family:'Playfair Display',serif;font-style:italic}
+.birthday-msg.show{opacity:1;transform:translateY(0)}
+
+/* Wish cards */
+.wish-cards{display:flex;flex-direction:column;gap:10px;margin-top:20px;width:100%}
+.wish-card{background:var(--glass);border:1px solid var(--border);border-radius:var(--radius2);padding:14px 16px;backdrop-filter:blur(10px);opacity:0;transform:translateX(-30px);transition:all 0.6s ease;cursor:pointer;text-align:left}
+.wish-card.show{opacity:1;transform:translateX(0)}
+.wish-card:active{transform:scale(0.97)}
+.wish-card .w-emoji{font-size:1.3rem;margin-right:10px}
+.wish-card .w-text{font-size:0.85rem;display:inline}
+.wish-card .w-reveal{display:none;font-size:0.8rem;color:var(--gold);margin-top:6px;padding-top:8px;border-top:1px solid var(--border)}
+.wish-card.opened .w-reveal{display:block}
+
+/* Cake */
+.cake-section{margin-top:24px;opacity:0;transform:translateY(30px);transition:all 0.8s ease}
+.cake-section.show{opacity:1;transform:translateY(0)}
+.cake-visual{font-size:4rem;margin-bottom:10px;position:relative}
+.candle{display:inline-block;animation:flicker 0.3s ease infinite alternate;margin:0 2px}
+@keyframes flicker{0%{opacity:1;transform:scale(1) rotate(-2deg)}100%{opacity:0.8;transform:scale(1.05) rotate(2deg)}}
+.blow-hint{font-size:0.75rem;color:var(--text3);margin-top:6px}
+.btn-blow{padding:10px 28px;background:linear-gradient(135deg,var(--gold),var(--amber));border:none;border-radius:20px;color:#000;font-weight:700;font-size:0.85rem;cursor:pointer;margin-top:10px;transition:all 0.3s}
+.btn-blow:hover{transform:scale(1.05);box-shadow:0 4px 20px rgba(255,215,0,0.3)}
+
+/* Final message */
+.final-msg{margin-top:24px;padding:20px;background:linear-gradient(135deg,rgba(255,107,157,0.1),rgba(192,132,252,0.1));border:1px solid rgba(255,107,157,0.2);border-radius:var(--radius);display:none;text-align:center}
+.final-msg.show{display:block;animation:fadeIn 1s ease}
+.final-msg .f-heart{font-size:2rem;margin-bottom:8px}
+.final-msg .f-text{font-size:0.95rem;line-height:1.6;color:var(--text)}
+.final-msg .f-from{font-size:0.8rem;color:var(--pink);margin-top:10px;font-style:italic}
+@keyframes fadeIn{from{opacity:0;transform:translateY(20px)}to{opacity:1;transform:translateY(0)}}
+
+/* Music toggle */
+.music-btn{position:fixed;top:16px;right:16px;z-index:200;width:40px;height:40px;border-radius:50%;background:var(--glass);border:1px solid var(--border);color:var(--text);font-size:1.1rem;cursor:pointer;display:none;align-items:center;justify-content:center;backdrop-filter:blur(10px)}
+.music-btn.show{display:flex}
+
+/* Particles canvas */
+#particles{position:fixed;top:0;left:0;width:100%;height:100%;pointer-events:none;z-index:5}
+</style>
+</head>
+<body>
+
+<!-- ═══ CREATOR SCREEN ═══ -->
+<div id="creator" class="screen active">
+<div class="creator-box">
+<div class="logo">
+<h1>🎂 Birthday Reveal</h1>
+<p class="sub">Create a magical birthday surprise with a scannable QR code</p>
+</div>
+
+<div class="form-card">
+<div class="field">
+<label>Recipient's Name</label>
+<input type="text" id="inpName" placeholder="e.g. Sarah" maxlength="30">
+</div>
+<div class="field">
+<label>Age (optional)</label>
+<input type="number" id="inpAge" placeholder="e.g. 25" min="1" max="120">
+</div>
+<div class="field">
+<label>Birthday Message</label>
+<textarea id="inpMsg" placeholder="Write a heartfelt birthday message..."></textarea>
+</div>
+<div class="field">
+<label>From (your name)</label>
+<input type="text" id="inpFrom" placeholder="e.g. Your best friend" maxlength="30">
+</div>
+<div class="field">
+<label>Theme</label>
+<div class="theme-grid" id="themeGrid">
+<div class="theme-opt active" data-theme="sparkle"><span class="t-emoji">✨</span>Sparkle</div>
+<div class="theme-opt" data-theme="galaxy"><span class="t-emoji">🌌</span>Galaxy</div>
+<div class="theme-opt" data-theme="sakura"><span class="t-emoji">🌸</span>Sakura</div>
+<div class="theme-opt" data-theme="ocean"><span class="t-emoji">🌊</span>Ocean</div>
+<div class="theme-opt" data-theme="sunset"><span class="t-emoji">🌅</span>Sunset</div>
+<div class="theme-opt" data-theme="forest"><span class="t-emoji">🌿</span>Forest</div>
+<div class="theme-opt" data-theme="candy"><span class="t-emoji">🍬</span>Candy</div>
+<div class="theme-opt" data-theme="royal"><span class="t-emoji">👑</span>Royal</div>
+</div>
+</div>
+<div class="field">
+<label>Surprise Wishes (tap to reveal)</label>
+<div style="display:flex;flex-direction:column;gap:6px" id="wishInputs">
+<div style="display:flex;gap:6px"><input type="text" class="wish-inp" placeholder="🎁 Wish 1 (e.g. May your dreams come true)" maxlength="80"><input type="text" class="wish-emoji-inp" placeholder="Emoji" style="max-width:60px" maxlength="4"></div>
+<div style="display:flex;gap:6px"><input type="text" class="wish-inp" placeholder="🌟 Wish 2" maxlength="80"><input type="text" class="wish-emoji-inp" placeholder="Emoji" style="max-width:60px" maxlength="4"></div>
+<div style="display:flex;gap:6px"><input type="text" class="wish-inp" placeholder="💖 Wish 3" maxlength="80"><input type="text" class="wish-emoji-inp" placeholder="Emoji" style="max-width:60px" maxlength="4"></div>
+<div style="display:flex;gap:6px"><input type="text" class="wish-inp" placeholder="🎈 Wish 4" maxlength="80"><input type="text" class="wish-emoji-inp" placeholder="Emoji" style="max-width:60px" maxlength="4"></div>
+<div style="display:flex;gap:6px"><input type="text" class="wish-inp" placeholder="🦋 Wish 5" maxlength="80"><input type="text" class="wish-emoji-inp" placeholder="Emoji" style="max-width:60px" maxlength="4"></div>
+</div>
+</div>
+<button class="btn-generate" onclick="generate()">✨ Generate QR Code</button>
+</div>
+
+<div id="qrResult">
+<p style="font-size:1rem;font-weight:600;color:var(--gold)">QR Code Generated!</p>
+<p class="qr-label">Scan this QR code to reveal the birthday surprise</p>
+<div id="qrCanvas"></div>
+<p class="qr-label" id="qrLink" style="word-break:break-all;font-size:0.7rem;margin-top:10px"></p>
+<button class="btn-action" onclick="downloadQR()">📥 Download QR</button>
+<button class="btn-action" onclick="copyLink()">📋 Copy Link</button>
+<button class="btn-action" onclick="previewReveal()">👀 Preview</button>
+</div>
+</div>
+</div>
+
+<!-- ═══ BIRTHDAY REVEAL SCREEN ═══ -->
+<div id="reveal" class="screen">
+<canvas id="revealCanvas"></canvas>
+<canvas id="particles"></canvas>
+
+<button class="music-btn" id="musicBtn" onclick="toggleMusic()">🎵</button>
+
+<!-- Tap to start -->
+<div class="tap-overlay" id="tapOverlay" onclick="startReveal()">
+<div class="tap-emoji">🎂</div>
+<div class="tap-text">Tap to open your birthday surprise</div>
+</div>
+
+<div class="reveal-content" id="revealContent" style="display:none">
+<div class="birthday-name" id="bName"></div>
+<div class="birthday-age" id="bAge"></div>
+<div class="birthday-msg" id="bMsg"></div>
+<div class="wish-cards" id="wishCards"></div>
+<div class="cake-section" id="cakeSection">
+<div class="cake-visual" id="cakeVisual">🎂</div>
+<button class="btn-blow" id="btnBlow" onclick="blowCandles()">🌬️ Blow the Candles!</button>
+<p class="blow-hint">Make a wish and blow!</p>
+</div>
+<div class="final-msg" id="finalMsg">
+<div class="f-heart">💕</div>
+<div class="f-text" id="finalText"></div>
+<div class="f-from" id="finalFrom"></div>
+</div>
+</div>
+</div>
+
+<script>
+// ═══ QR CODE GENERATOR (minimal) ═══
+const QR=(()=>{const ECL={L:1,M:0,Q:3,H:2};const MODE={NUM:1,ALPHA:2,BYTE:4};
+function gfPow(){const exp=new Uint8Array(256);const log=new Uint8Array(256);let x=1;for(let i=0;i<255;i++){exp[i]=x;log[x]=i;x=(x<<1)^(x>=128?0x11d:0)}exp[255]=exp[0];return{exp,log}}
+const GF=gfPow();
+function rsGenPoly(n){let g=[1];for(let i=0;i<n;i++){const ng=new Uint8Array(g.length+1);for(let j=0;j<g.length;j++){ng[j]^=g[j];ng[j+1]^=GF.exp[(GF.log[g[j]]+i)%255]}g=Array.from(ng)}return g}
+function rsEncode(data,nec){const gen=rsGenPoly(nec);const res=new Uint8Array(nec);for(let i=0;i<data.length;i++){const f=data[i]^res[0];res.copyWithin(0,1);res[nec-1]=0;for(let j=0;j<gen.length;j++)res[j]^=GF.exp[(GF.log[gen[j]]+GF.log[f])%255]}return res}
+function verInfo(ver){const ec=[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0];const dc=[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0];return{ec,dc}}
+function encode(text,ecLevel='M'){const d=new TextEncoder().encode(text);const ver=d.length<=17?1:d.length<=32?2:d.length<=53?3:d.length<=78?4:d.length<=106?5:d.length<=134?6:d.length<=154?7:d.length<=192?8:d.length<=230?9:d.length<=271?10:11;const size=ver*4+17;const bits=[];bits.push(0,1,0,0);const lenBits=ver<=9?8:16;for(let i=lenBits-1;i>=0;i--)bits.push((d.length>>i)&1);for(const b of d)for(let i=7;i>=0;i--)bits.push((b>>i)&1);const cap=ver<=1?[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0][ver]:0;const totalData=ver<=1?16:ver<=2?28:ver<=3?44:ver<=4?64:0;while(bits.length<totalData*8){bits.push(1,1,1,0,1,1,0,0,0,0,0,1,0,0,0,1);if(bits.length>totalData*8)bits.length=totalData*8}while(bits.length%8)bits.push(0);const bytes=[];for(let i=0;i<bits.length;i+=8){let v=0;for(let j=0;j<8;j++)v=(v<<1)|bits[i+j];bytes.push(v)}const ecPerBlock=ver<=1?7:ver<=2?10:ver<=3?15:ver<=4?20:10;const dataBlocks=ver<=1?[bytes]:ver<=2?[bytes.slice(0,14),bytes.slice(14)]:ver<=3?[bytes.slice(0,22),bytes.slice(22)]:[bytes.slice(0,32),bytes.slice(32)];const ecBlocks=dataBlocks.map(b=>Array.from(rsEncode(b,ecPerBlock)));const final=[];const maxLen=Math.max(...dataBlocks.map(b=>b.length));for(let i=0;i<maxLen;i++)for(const b of dataBlocks)if(i<b.length)final.push(b[i]);for(let i=0;i<ecPerBlock;i++)for(const b of ecBlocks)if(i<b.length)final.push(b[i]);const grid=Array.from({length:size},()=>Array(size).fill(null));function setModule(r,c,v){if(r>=0&&r<size&&c>=0&&c<size)grid[r][c]=v}function drawFinder(sr,sc){for(let r=-1;r<=7;r++)for(let c=-1;c<=7;c++){const v=(r>=0&&r<=6&&(c===0||c===6))||(c>=0&&c<=6&&(r===0||r===6))||(r>=2&&r<=4&&c>=2&&c<=4);setModule(sr+r,sc+c,r===-1||c===-1||r===7||c===7?false:v)}}drawFinder(0,0);drawFinder(0,size-7);drawFinder(size-7,0);for(let i=8;i<size-8;i++){setModule(6,i,i%2===0);setModule(i,6,i%2===0)}setModule(size-8,8,true);let bitIdx=0;const dirs=[[-1,0],[1,0]];for(let right=size-1;right>=1;right-=2){if(right===6)right=5;for(let vert=0;vert<size;vert++){for(let j=0;j<2;j++){const c=right-j;const row=(((right+1)&2)===0)?size-1-vert:vert;function isReserved(r,c){if(r<9&&c<9)return true;if(r<9&&c>=size-8)return true;if(r>=size-8&&c<9)return true;if(r===6||c===6)return true;return false}if(grid[row][c]===null&&!isReserved(row,c)){grid[row][c]=bitIdx<final.length*8?((final[bitIdx>>3]>>(7-(bitIdx&7)))&1)===1:false;bitIdx++}}}}for(let r=0;r<size;r++)for(let c=0;c<size;c++)if(grid[r][c]===null)grid[r][c]=false;return{grid,size,ver}}return{encode}})();
+
+// ═══ STATE ═══
+let state={name:'',age:'',msg:'',from:'',theme:'sparkle',wishes:[],data:''};
+let revealPhase=0;
+let audioCtx=null;
+let particles=[];
+let confettiParticles=[];
+let animFrame=null;
+
+// ═══ THEME COLORS ═══
+const THEMES={
+sparkle:{bg1:'#0a0a12',bg2:'#1a0a2e',accent:'#ffd700',particles:['#ffd700','#ff6b9d','#c084fc','#67e8f9']},
+galaxy:{bg1:'#020010',bg2:'#0a0030',accent:'#67e8f9',particles:['#67e8f9','#c084fc','#ff6b9d','#a78bfa']},
+sakura:{bg1:'#1a0a12',bg2:'#2a0a1e',accent:'#ffb7c5',particles:['#ffb7c5','#ff9eb5','#ffd1dc','#fff0f5']},
+ocean:{bg1:'#001220',bg2:'#002040',accent:'#00d4ff',particles:['#00d4ff','#0099cc','#66e0ff','#00ffcc']},
+sunset:{bg1:'#1a0a00',bg2:'#2a1a0a',accent:'#ff6b35',particles:['#ff6b35','#ffaa00','#ff3366','#ffd700']},
+forest:{bg1:'#0a1a0a',bg2:'#0a2a0a',accent:'#00ff88',particles:['#00ff88','#88ff00','#ffd700','#00cc66']},
+candy:{bg1:'#1a0020',bg2:'#2a0030',accent:'#ff69b4',particles:['#ff69b4','#ff1493','#da70d6','#ff6eb4']},
+royal:{bg1:'#0a0a1a',bg2:'#1a0a2a',accent:'#daa520',particles:['#daa520','#b8860b','#ffd700','#c084fc']}
+};
+
+// ═══ CREATOR LOGIC ═══
+document.querySelectorAll('.theme-opt').forEach(el=>{
+el.addEventListener('click',()=>{
+document.querySelectorAll('.theme-opt').forEach(e=>e.classList.remove('active'));
+el.classList.add('active');
+state.theme=el.dataset.theme;
+});
+});
+
+function generate(){
+state.name=document.getElementById('inpName').value.trim()||'You';
+state.age=document.getElementById('inpAge').value.trim();
+state.msg=document.getElementById('inpMsg').value.trim()||'Wishing you the happiest birthday ever!';
+state.from=document.getElementById('inpFrom').value.trim();
+
+const wishInps=document.querySelectorAll('.wish-inp');
+const emojiInps=document.querySelectorAll('.wish-emoji-inp');
+state.wishes=[];
+wishInps.forEach((inp,i)=>{
+if(inp.value.trim()){
+state.wishes.push({text:inp.value.trim(),emoji:emojiInps[i].value.trim()||['🎁','🌟','💖','🎈','🦋'][i]});
+}
+});
+
+// Encode data into URL hash
+const d={n:state.name,a:state.age,m:state.msg,f:state.from,t:state.theme,w:state.wishes};
+const encoded=btoa(unescape(encodeURIComponent(JSON.stringify(d))));
+state.data=encoded;
+
+const url=window.location.origin+window.location.pathname+'#'+encoded;
+
+// Generate QR
+const qrDiv=document.getElementById('qrCanvas');
+qrDiv.innerHTML='';
+try{
+const qr=QR.encode(url,'M');
+const scale=6;
+const canvas=document.createElement('canvas');
+const size=qr.size*scale+40;
+canvas.width=size;canvas.height=size;
+const ctx=canvas.getContext('2d');
+ctx.fillStyle='#ffffff';
+ctx.fillRect(0,0,size,size);
+ctx.fillStyle='#000000';
+for(let r=0;r<qr.size;r++){
+for(let c=0;c<qr.size;c++){
+if(qr.grid[r][c])ctx.fillRect(20+c*scale,20+r*scale,scale,scale);
+}
+}
+// Add center logo area
+const center=size/2;
+ctx.fillStyle='#ffffff';
+ctx.fillRect(center-18,center-18,36,36);
+ctx.fillStyle='#000';
+ctx.font='20px serif';
+ctx.textAlign='center';
+ctx.textBaseline='middle';
+ctx.fillText('🎂',center,center);
+
+qrDiv.appendChild(canvas);
+document.getElementById('qrLink').textContent=url;
+document.getElementById('qrResult').style.display='block';
+document.getElementById('qrResult').scrollIntoView({behavior:'smooth'});
+}catch(e){
+alert('Error generating QR. Try shorter message.');
+}
+}
+
+function downloadQR(){
+const canvas=document.querySelector('#qrCanvas canvas');
+if(!canvas)return;
+const a=document.createElement('a');
+a.download='birthday-qr-'+state.name+'.png';
+a.href=canvas.toDataURL('image/png');
+a.click();
+}
+
+function copyLink(){
+const url=window.location.origin+window.location.pathname+'#'+state.data;
+navigator.clipboard.writeText(url).then(()=>alert('Link copied!')).catch(()=>prompt('Copy this link:',url));
+}
+
+function previewReveal(){
+loadRevealFromHash(state.data);
+showScreen('reveal');
+}
+
+// ═══ REVEAL LOGIC ═══
+function loadRevealFromHash(hash){
+try{
+const d=JSON.parse(decodeURIComponent(escape(atob(hash))));
+state.name=d.n||'You';
+state.age=d.a||'';
+state.msg=d.m||'Happy Birthday!';
+state.from=d.f||'';
+state.theme=d.t||'sparkle';
+state.wishes=d.w||[];
+return true;
+}catch(e){return false}
+}
+
+function showScreen(id){
+document.querySelectorAll('.screen').forEach(s=>s.classList.remove('active'));
+document.getElementById(id).classList.add('active');
+}
+
+// ═══ REVEAL ANIMATION ═══
+function startReveal(){
+document.getElementById('tapOverlay').style.display='none';
+document.getElementById('revealContent').style.display='block';
+document.getElementById('musicBtn').classList.add('show');
+initAudio();
+
+// Phase 1: Show name
+setTimeout(()=>{
+document.getElementById('bName').textContent=`Happy Birthday, ${state.name}!`;
+document.getElementById('bName').classList.add('show');
+playTone(523,0.3);
+},300);
+
+// Phase 2: Show age
+setTimeout(()=>{
+if(state.age){
+document.getElementById('bAge').textContent=state.age;
+document.getElementById('bAge').classList.add('show');
+playTone(659,0.3);
+}
+},1200);
+
+// Phase 3: Show message
+setTimeout(()=>{
+document.getElementById('bMsg').textContent=`"${state.msg}"`;
+document.getElementById('bMsg').classList.add('show');
+playTone(784,0.3);
+},2000);
+
+// Phase 4: Show wish cards
+setTimeout(()=>{
+const container=document.getElementById('wishCards');
+container.innerHTML='';
+state.wishes.forEach((w,i)=>{
+const card=document.createElement('div');
+card.className='wish-card';
+card.innerHTML=`<span class="w-emoji">${w.emoji}</span><span class="w-text">Tap to reveal wish #${i+1}</span><div class="w-reveal">${w.text}</div>`;
+card.addEventListener('click',()=>{
+card.classList.toggle('opened');
+if(card.classList.contains('opened')){
+card.querySelector('.w-text').textContent=w.text;
+playTone(880+i*50,0.2);
+spawnConfetti(20);
+}
+});
+container.appendChild(card);
+setTimeout(()=>card.classList.add('show'),i*300);
+});
+},3000);
+
+// Phase 5: Show cake
+setTimeout(()=>{
+document.getElementById('cakeSection').classList.add('show');
+playMelody([523,659,784,1047],0.2);
+},3000+state.wishes.length*300+500);
+}
+
+function blowCandles(){
+const cake=document.getElementById('cakeVisual');
+cake.innerHTML='🎂<br><span style="font-size:0.7rem;color:var(--text3)">✨ blown out ✨</span>';
+document.getElementById('btnBlow').style.display='none';
+playTone(392,0.5);
+spawnConfetti(80);
+
+// Show final message
+setTimeout(()=>{
+document.getElementById('finalText').textContent=state.msg;
+document.getElementById('finalFrom').textContent=state.from?`— With love, ${state.from} 💕`:'💕';
+document.getElementById('finalMsg').classList.add('show');
+playMelody([523,659,784,1047,784,1047],0.25);
+},1000);
+}
+
+// ═══ PARTICLES & CONFETTI ═══
+function initParticles(){
+const canvas=document.getElementById('particles');
+const ctx=canvas.getContext('2d');
+canvas.width=window.innerWidth;
+canvas.height=window.innerHeight;
+
+const theme=THEMES[state.theme]||THEMES.sparkle;
+particles=[];
+for(let i=0;i<60;i++){
+particles.push({
+x:Math.random()*canvas.width,
+y:Math.random()*canvas.height,
+vx:(Math.random()-0.5)*0.5,
+vy:-Math.random()*0.5-0.2,
+size:Math.random()*3+1,
+color:theme.particles[Math.floor(Math.random()*theme.particles.length)],
+life:Math.random()*200+100,
+maxLife:300,
+type:'float'
+});
+}
+
+function animate(){
+ctx.clearRect(0,0,canvas.width,canvas.height);
+
+// Update & draw particles
+for(let i=particles.length-1;i>=0;i--){
+const p=particles[i];
+p.x+=p.vx;
+p.y+=p.vy;
+p.life--;
+
+if(p.life<=0||p.y<-10||p.x<-10||p.x>canvas.width+10){
+particles.splice(i,1);
+continue;
+}
+
+const alpha=Math.min(1,p.life/50);
+ctx.globalAlpha=alpha;
+if(p.type==='float'){
+ctx.fillStyle=p.color;
+ctx.beginPath();
+ctx.arc(p.x,p.y,p.size,0,Math.PI*2);
+ctx.fill();
+}else if(p.type==='confetti'){
+ctx.save();
+ctx.translate(p.x,p.y);
+ctx.rotate(p.rotation);
+ctx.fillStyle=p.color;
+ctx.fillRect(-p.size/2,-p.size/2,p.size,p.size*0.6);
+ctx.restore();
+p.rotation+=p.rotSpeed;
+p.vy+=0.1;
+}
+}
+
+// Spawn new floating particles
+if(Math.random()<0.3&&particles.filter(p=>p.type==='float').length<50){
+const theme=THEMES[state.theme]||THEMES.sparkle;
+particles.push({
+x:Math.random()*canvas.width,
+y:canvas.height+10,
+vx:(Math.random()-0.5)*0.5,
+vy:-Math.random()*0.8-0.3,
+size:Math.random()*3+1,
+color:theme.particles[Math.floor(Math.random()*theme.particles.length)],
+life:200,
+type:'float'
+});
+}
+
+ctx.globalAlpha=1;
+animFrame=requestAnimationFrame(animate);
+}
+animate();
+}
+
+function spawnConfetti(count){
+const canvas=document.getElementById('particles');
+const theme=THEMES[state.theme]||THEMES.sparkle;
+for(let i=0;i<count;i++){
+particles.push({
+x:canvas.width/2+(Math.random()-0.5)*200,
+y:canvas.height/2,
+vx:(Math.random()-0.5)*8,
+vy:-Math.random()*8-2,
+size:Math.random()*8+4,
+color:theme.particles[Math.floor(Math.random()*theme.particles.length)],
+life:150,
+type:'confetti',
+rotation:Math.random()*Math.PI*2,
+rotSpeed:(Math.random()-0.5)*0.2
+});
+}
+}
+
+// ═══ AUDIO ═══
+function initAudio(){
+if(!audioCtx)audioCtx=new(window.AudioContext||window.webkitAudioContext)();
+}
+
+function playTone(freq,dur){
+if(!audioCtx)return;
+const osc=audioCtx.createOscillator();
+const gain=audioCtx.createGain();
+osc.connect(gain);
+gain.connect(audioCtx.destination);
+osc.frequency.value=freq;
+osc.type='sine';
+gain.gain.setValueAtTime(0.15,audioCtx.currentTime);
+gain.gain.exponentialRampToValueAtTime(0.001,audioCtx.currentTime+dur);
+osc.start(audioCtx.currentTime);
+osc.stop(audioCtx.currentTime+dur);
+}
+
+function playMelody(freqs,dur){
+freqs.forEach((f,i)=>setTimeout(()=>playTone(f,dur),i*dur*1000));
+}
+
+function toggleMusic(){
+if(!audioCtx){initAudio();return}
+// Play a simple birthday melody
+const melody=[
+[262,0.3],[262,0.15],[294,0.3],[262,0.3],[349,0.3],[330,0.6],
+[262,0.3],[262,0.15],[294,0.3],[262,0.3],[392,0.3],[349,0.6],
+[262,0.3],[262,0.15],[523,0.3],[440,0.3],[349,0.3],[330,0.3],[294,0.6],
+[466,0.3],[466,0.15],[440,0.3],[349,0.3],[392,0.3],[349,0.6]
+];
+let time=0;
+melody.forEach(([f,d])=>{
+setTimeout(()=>playTone(f,d),time*1000);
+time+=d+0.05;
+});
+}
+
+// ═══ BACKGROUND GRADIENT ═══
+function initBackground(){
+const canvas=document.getElementById('revealCanvas');
+const ctx=canvas.getContext('2d');
+canvas.width=window.innerWidth;
+canvas.height=window.innerHeight;
+const theme=THEMES[state.theme]||THEMES.sparkle;
+
+function drawBg(){
+const grad=ctx.createRadialGradient(canvas.width/2,canvas.height/2,0,canvas.width/2,canvas.height/2,canvas.width*0.7);
+grad.addColorStop(0,theme.bg2);
+grad.addColorStop(1,theme.bg1);
+ctx.fillStyle=grad;
+ctx.fillRect(0,0,canvas.width,canvas.height);
+requestAnimationFrame(drawBg);
+}
+drawBg();
+}
+
+// ═══ INIT ═══
+function init(){
+const hash=window.location.hash.slice(1);
+if(hash&&loadRevealFromHash(hash)){
+showScreen('reveal');
+initBackground();
+initParticles();
+}
+}
+
+window.addEventListener('hashchange',()=>{
+const hash=window.location.hash.slice(1);
+if(hash&&loadRevealFromHash(hash)){
+showScreen('reveal');
+initBackground();
+initParticles();
+}
+});
+
+window.addEventListener('resize',()=>{
+const pc=document.getElementById('particles');
+const bc=document.getElementById('revealCanvas');
+if(pc){pc.width=window.innerWidth;pc.height=window.innerHeight}
+if(bc){bc.width=window.innerWidth;bc.height=window.innerHeight}
+});
+
+init();
+</script>
+</body>
+</html>
